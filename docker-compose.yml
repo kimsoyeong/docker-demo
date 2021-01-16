@@ -2,25 +2,9 @@ version: '3.8'
 
 services:
 
-  mysql_db:
-    image: mysql:latest
-    restart: always
-    networks: 
-       - app-tier
-    volumes:
-       - ./mysql/db:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    cap_add:
-      - SYS_NICE
-    environment:
-      - MYSQL_DATABASE=app
-      - MYSQL_USER=user
-      - MYSQL_PASSWORD=1234
-      - MYSQL_ROOT_PASSWORD=1234
-
   postgres_db:
     image: "postgres"
+    container_name: postgres_DB
     restart: always
     networks:
       - app-tier
@@ -35,119 +19,26 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=1234
 
-  mongo_db:
-    image: mongo:latest
-    restart: unless-stopped    
-    networks: 
-       - app-tier
-    volumes:
-       - ./mongo/db:/data/db
-    ports:
-      - "27017:27017"
-
-  elastic_search:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
-    container_name: es01
-    environment:
-      - node.name=es01
-      - cluster.name=es-docker-cluster
-      - cluster.initial_master_nodes=es01
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - ./elasticsearch/data01:/usr/share/elasticsearch/data
-    ports:
-      - 9200:9200
-    networks:
-      - app-tier
-
-  redis:
-    image: "redis:alpine"
-    networks: 
-       - app-tier
-    ports:
-      - "6379:6379"
-
   flask_app:
     build:
-      context: .
-      dockerfile: ./flask/Dockerfile
+      context: ./flask
+      dockerfile: Dockerfile
+    container_name: flask_app
     ports:
       - "5000:5000"    
-    links:
-      - mongo_db:mongo_db     
-      - mysql_db:mysql_db             
+    links:   
+      - postgres_db:postgres_db            
     depends_on:
-      - mysql_db
-      - mongo_db
-      - redis
+      - postgres_db
     networks:
       - app-tier
     restart: always      
     volumes:
        - ./flask/web:/app
 
-  django_app:
-    build:
-      context: .
-      dockerfile: ./django/Dockerfile
-    ports:
-      - "8000:8000"
-    links:
-      - mongo_db:mongo_db
-      - mysql_db:mysql_db
-    depends_on:
-      - mysql_db
-      - mongo_db
-      - redis
-    networks:
-      - app-tier
-    restart: always
-    volumes:
-      - ./django/app:/app
-    env_file:
-      - ./django/env.dev
-
-  java_app:
-    build:
-      context: .
-      dockerfile: ./java/docker-spring-boot/Dockerfile
-    ports:
-      - "8080:8080"    
-    volumes:
-       - ./java/docker-spring-boot/target:/opt/app
-    links:
-      - mongo_db:mongo_db       
-    depends_on:
-      - mysql_db
-      - mongo_db
-      - redis
-    networks:
-      - app-tier
-    restart: always        
-
-  nodejs_app:
-    build:
-      context: .
-      dockerfile: ./nodejs/Dockerfile
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./nodejs:/app/src
-    links:
-      - mongo_db:mongo_db
-    depends_on:
-      - mongo_db
-    networks:
-      - app-tier
-    restart: always
-
   notebook:
     image: jupyter/all-spark-notebook
+    container_name: jupyter-notebook
     labels:
       description: Intel Python using Jupyter Notebooks
       name: jupyter notebook
@@ -157,6 +48,41 @@ services:
       - app-tier
     volumes:
       - ./notebook:/home/notebooks
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: "on-failure"
+    expose:
+      - 3000
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOOLING=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    stdin_open: true
+    tty: true
+    networks:
+      - app-tier
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: "on-failure"
+    ports:
+      - "81:81"
+      - "8000:8000"
+    volumes:
+      - ./staticfiles:/static
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - flask_app
+      - frontend
+    networks:
+      - app-tier
 
 networks:
   app-tier:

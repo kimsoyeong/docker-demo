@@ -1,8 +1,6 @@
 flask
-redis
-pymysql
-pymongo
-flask-mysql
+flask-cors
 jsonify
 requests
 cryptography
+gunicorn
