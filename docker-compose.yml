@@ -23,6 +23,7 @@ services:
     build:
       context: ./flask
       dockerfile: Dockerfile
+    command: gunicorn --bind 0.0.0.0:5000 app:app
     container_name: flask_app
     ports:
       - "5000:5000"    
@@ -55,8 +56,8 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     restart: "on-failure"
-    expose:
-      - 3000
+    ports:
+      - "3000:3000"
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOOLING=true

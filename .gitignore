@@ -53,9 +53,8 @@ node_modules
 .sass-cache
 .idea
 
-mongo/db
-mysql/db
-
+# database
+postgresql/db
 
 # Java Package Files #
 *.jar
