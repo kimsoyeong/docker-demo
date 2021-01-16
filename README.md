@@ -1,3 +1,16 @@
+React App
+- port: 3000 or 81(nginx)
+
+Flask App
+- port: 5000 or 8000(nginx)
+
+Jupyter notebook
+- port: 8888
+
+PostgreSQL
+- port: 5432
+
+---
 # docker-demo
 A Docker - composer example that provides a Django, Flask, Java, Redis, Elasticsearch, MySQL, Postgres, and Mongo container
 
