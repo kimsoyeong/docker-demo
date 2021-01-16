@@ -72,3 +72,5 @@ postgresql/db
 .classpath
 .project
 .settings
+
+notebook/
